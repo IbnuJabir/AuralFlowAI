@@ -136,3 +136,217 @@ video-dubbing-platform/
 ├── README.md                          # Project readme
 └── LICENSE                            # Project license
 ```
+
+# Voice Dubbing & Cloning Backend Setup Guide
+
+## Installation Steps
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Install Redis (Required for Celery)
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install redis-server
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+```
+
+**macOS:**
+```bash
+brew install redis
+brew services start redis
+```
+
+**Windows:**
+```bash
+# Using WSL or Docker
+docker run -d -p 6379:6379 --name redis redis:alpine
+```
+
+### 3. Create Required Directories
+
+```bash
+mkdir -p backend/uploads/voice/output
+mkdir -p backend/logs
+```
+
+### 4. Environment Configuration
+
+Create `backend/.env`:
+
+```env
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+
+# Celery Configuration
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# File Upload Configuration
+MAX_FILE_SIZE=104857600  # 100MB in bytes
+UPLOAD_DIR=uploads
+
+# ML Model Configuration
+MODELS_DIR=ml/models
+WHISPER_MODEL=base
+NLLB_MODEL=facebook/nllb-200-distilled-600M
+```
+
+## Running the Application
+
+### 1. go to backend directory
+```bash
+cd backend
+```
+
+### 2. Start Redis Server
+```bash
+redis-server
+```
+### 3. create a vertual environment
+```bash
+python3 -m venv venv
+```
+### 4. activate the virtual environment:
+```bash
+source venv/bin/activate
+```
+
+### 5. Start Celery Worker
+```bash
+cd backend
+celery -A workers.celery_app worker --loglevel=info
+```
+
+### 3. Start FastAPI Server
+```bash
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 4. Optional: Start Celery Flower (Monitoring)
+```bash
+celery -A workers.celery_app flower --port=5555
+```
+
+## API Endpoints
+
+### Voice Cloning Endpoints
+
+1. **Submit Voice Clone Request**
+   - `POST /api/voice/voice-clone`
+   - Accepts file upload or URL link
+   - Returns task ID for tracking
+
+2. **Check Task Status**
+   - `GET /api/voice/status/{task_id}`
+   - Returns current processing status
+
+3. **Cancel Task**
+   - `DELETE /api/voice/task/{task_id}`
+   - Cancels running task
+
+4. **Get Supported Formats**
+   - `GET /api/voice/supported-formats`
+   - Returns supported file formats and languages
+
+## Frontend Integration
+
+Update your Next.js environment variables in `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+## Testing the API
+
+### Using curl:
+
+```bash
+# Upload a file
+curl -X POST "http://localhost:8000/api/voice/voice-clone" \
+  -F "type=file" \
+  -F "file=@sample.mp3" \
+  -F "target_language=es" \
+  -F "source=local"
+
+# Check status
+curl "http://localhost:8000/api/voice/status/your-task-id"
+
+# Submit URL
+curl -X POST "http://localhost:8000/api/voice/voice-clone" \
+  -F "type=link" \
+  -F "link=https://example.com/audio.mp3" \
+  -F "target_language=fr" \
+  -F "source=youtube"
+```
+
+## Integrating Your ML Pipelines
+
+Replace the placeholder functions in `audio_tasks.py` with your actual ML pipeline calls:
+
+```python
+# Replace these imports with your actual pipelines
+from ml.pipelines.transcription import transcribe_audio
+from ml.pipelines.translation import translate_text
+from ml.pipelines.vocal_separation import separate_vocals
+from ml.pipelines.voice_cloning import clone_voice
+```
+
+## Monitoring and Logging
+
+### View Celery Tasks
+Visit `http://localhost:5555` if you started Flower
+
+### View Logs
+```bash
+tail -f backend/logs/app.log
+```
+
+### Redis Monitoring
+```bash
+redis-cli monitor
+```
+
+## Production Considerations
+
+1. **Use a production WSGI server:**
+   ```bash
+   gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
+   ```
+
+2. **Configure proper CORS origins**
+3. **Set up file size limits**
+4. **Implement authentication/authorization**
+5. **Add rate limiting**
+6. **Set up proper logging and monitoring**
+7. **Use environment-specific configuration**
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **Redis Connection Error:**
+   - Check if Redis is running: `redis-cli ping`
+   - Verify REDIS_URL in environment
+
+2. **File Upload Errors:**
+   - Check file size limits
+   - Verify upload directory permissions
+
+3. **Celery Tasks Not Starting:**
+   - Check Celery worker logs
+   - Verify Redis connection
+   - Check task imports
+
+4. **CORS Issues:**
+   - Update allowed origins in main.py
+   - Check frontend API URL configuration
