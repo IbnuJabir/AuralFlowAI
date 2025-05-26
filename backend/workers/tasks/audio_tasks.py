@@ -6,7 +6,7 @@ import logging
 import os
 import time
 from pathlib import Path
-
+from workers.services.audio_service import AudioService
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True)
@@ -56,7 +56,7 @@ def process_voice_cloning_task(
             
             # Here you would call your audio extraction pipeline
             # For now, we'll simulate the process
-            extracted_audio_path = extract_audio_from_video(file_path)
+            extracted_audio_path = AudioService.extract_audio_from_video(file_path)
             processing_file_path = extracted_audio_path
         else:
             processing_file_path = file_path
@@ -68,7 +68,7 @@ def process_voice_cloning_task(
         )
         
         # Call your vocal separation pipeline
-        vocals_path = separate_vocals(processing_file_path)
+        vocals_path = AudioService.separate_vocals(processing_file_path)
         
         # Step 4: Speech recognition/transcription
         self.update_state(
