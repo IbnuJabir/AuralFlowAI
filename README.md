@@ -359,3 +359,7 @@ redis-cli monitor
 4. **CORS Issues:**
    - Update allowed origins in main.py
    - Check frontend API URL configuration
+
+```bash
+pip install aiofiles torch torchaudio ffmpeg-python openai-whisper transformers demucs TTS sentencepiece sacremoses librosa soundfile pydub numpy scipy scikit-learn loguru python-dotenv requests
+```
