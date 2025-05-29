@@ -141,6 +141,15 @@ video-dubbing-platform/
 
 ## Installation Steps
 
+### Create Virtual Environment
+```bash
+python3 -m venv venv
+```
+
+```bash
+source venv/bin/activate
+```
+
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
